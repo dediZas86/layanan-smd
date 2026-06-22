@@ -1,10 +1,12 @@
 import streamlit as st
+import json
 import gspread
 from google.oauth2.service_account import Credentials
 from fpdf import FPDF
 from datetime import datetime
 from PIL import Image
 import io
+import os
 
 st.set_page_config(page_title="Data Potongan Gaji", layout="centered")
 st.title("===Data Potongan Gaji===")
@@ -88,9 +90,10 @@ if submit:
                 nama_ktp, nama_surat, total_potongan
             ]
             
-            # KONEK GOOGLE SHEETS
+            # KONEK GOOGLE SHEETS - UDAH FIX PAKE JSON.LOADS
             scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-            creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
+            creds_json = json.loads(st.secrets["gcp_service_account"])
+            creds = Credentials.from_service_account_info(creds_json, scopes=scope)
             client = gspread.authorize(creds)
             
             SHEET_ID = "1uyYO8BJY_yRwgeAaIQsOhIrzGwz5qkJ7gHuGX4Yc0YY"
@@ -107,7 +110,7 @@ if submit:
             st.balloons()
             st.write(f"**Nama:** {nama_karyawan} | **Total Potongan:** Rp {total_potongan:,}".replace(",", "."))
             
-            # FUNGSI PDF TETEP ADA
+            # FUNGSI PDF
             def add_file_to_pdf(pdf_obj, uploaded_file, title):
                 if uploaded_file is None:
                     return
@@ -124,7 +127,6 @@ if submit:
                     img_path = f"temp_img_{datetime.now().strftime('%H%M%S')}.jpg"
                     img.convert('RGB').save(img_path)
                     pdf_obj.image(img_path, x=10, y=30, w=190)
-                    import os
                     os.remove(img_path)
                 else:
                     pdf_obj.set_font("Arial", "", 11)
@@ -164,7 +166,6 @@ if submit:
             pdf.output(pdf_file)
             with open(pdf_file, "rb") as f:
                 pdf_output = f.read()
-            import os
             os.remove(pdf_file)
 
             st.download_button(
