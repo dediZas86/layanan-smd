@@ -11,7 +11,6 @@ st.caption("Keterangan: Sebelum kirim Cek Kembali Data yang anda kirimkan")
 karyawan_list = ["Pilih...", "Tambah Karyawan Baru"]
 file_excel = "rekap_potongan.xlsx"
 
-# Bikin excel kosong kalo belum ada
 if not os.path.exists(file_excel):
     pd.DataFrame().to_excel(file_excel, index=False)
 
@@ -34,9 +33,9 @@ with st.form("form_potongan"):
     potongan_kecerobohan = st.number_input("Potongan Kecerobohan", min_value=0)
     sisa_kecerobohan = st.number_input("Sisa Kecerobohan", min_value=0)
     
-    st.subheader("Bon Panjar")  # PINDAH KE SINI
+    st.subheader("Bon Panjar")  # HAPUS SISA BON
     potongan_bon = st.number_input("Potongan Bon Panjar", min_value=0)
-    sisa_bon = st.number_input("Sisa Bon Panjar", min_value=0)
+    # sisa_bon Dihapus
     
     st.subheader("Minus")
     minus_tunai = st.number_input("Minus Tunai", min_value=0)
@@ -68,6 +67,7 @@ if submit:
     nama_ktp = ktp_baru.name if ktp_baru else "-"
     nama_surat = surat_sakit.name if surat_sakit else "-"
     
+    # total_potongan juga dihapus sisa_bon
     total_potongan = potongan_bon + potongan_kredit + potongan_kecerobohan + potongan_minus + potongan_tidak_masuk + jumlah_potongan_lain
     
     data_baru = {
@@ -79,8 +79,7 @@ if submit:
         "Sisa Kredit Lunak": sisa_kredit,
         "Potongan Kecerobohan": potongan_kecerobohan,
         "Sisa Kecerobohan": sisa_kecerobohan,
-        "Potongan Bon Panjar": potongan_bon,  # PINDAH KE SINI
-        "Sisa Bon Panjar": sisa_bon,
+        "Potongan Bon Panjar": potongan_bon,
         "Minus Tunai": minus_tunai,
         "Potongan Minus": potongan_minus,
         "Jumlah Hari Tidak Masuk": jumlah_tidak_masuk,
@@ -98,7 +97,6 @@ if submit:
         "File Surat Sakit": nama_surat
     }
     
-    # Simpan ke Excel
     df_baru = pd.DataFrame([data_baru])
     df_lama = pd.read_excel(file_excel)
     df_gabung = pd.concat([df_lama, df_baru], ignore_index=True)
@@ -107,7 +105,7 @@ if submit:
     st.success("✅ Data berhasil disimpan! Cek kembali sebelum kirim ke atasan")
     st.dataframe(df_baru, use_container_width=True)
 
-    # BIKIN PDF
+    # PDF juga dihapus baris Sisa Bon Panjar
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
@@ -122,7 +120,7 @@ if submit:
     pdf.cell(0, 7, "Rincian Potongan:", 0, 1)
     pdf.cell(0, 7, f"- Kredit Lunak: Rp {potongan_kredit:,}".replace(",", "."), 0, 1)
     pdf.cell(0, 7, f"- Kecerobohan: Rp {potongan_kecerobohan:,}".replace(",", "."), 0, 1)
-    pdf.cell(0, 7, f"- Bon Panjar: Rp {potongan_bon:,}".replace(",", "."), 0, 1)
+    pdf.cell(0, 7, f"- Bon Panjar: Rp {potongan_bon:,}".replace(",", "."), 0, 1)  # Sisa dihapus
     pdf.cell(0, 7, f"- Minus: Rp {potongan_minus:,}".replace(",", "."), 0, 1)
     pdf.cell(0, 7, f"- Tidak Masuk: Rp {potongan_tidak_masuk:,}".replace(",", "."), 0, 1)
     pdf.cell(0, 7, f"- Lainnya: Rp {jumlah_potongan_lain:,}".replace(",", "."), 0, 1)
@@ -137,7 +135,6 @@ if submit:
         mime="application/pdf"
     )
 
-# REKAP DATA
 if st.checkbox("Lihat Rekap Semua Data"):
     if os.path.exists(file_excel):
         st.dataframe(pd.read_excel(file_excel), use_container_width=True)
