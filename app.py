@@ -11,6 +11,10 @@ st.caption("Keterangan: Sebelum kirim Cek Kembali Data yang anda kirimkan")
 karyawan_list = ["Pilih...", "Tambah Karyawan Baru"]
 file_excel = "rekap_potongan.xlsx"
 
+# Bikin excel kosong kalo belum ada
+if not os.path.exists(file_excel):
+    pd.DataFrame().to_excel(file_excel, index=False)
+
 with st.form("form_potongan"):
     nama_kantor = st.text_input("Nama Kantor")
     
@@ -22,10 +26,6 @@ with st.form("form_potongan"):
     
     jumlah_hari_kerja = st.number_input("Jumlah Hari Kerja", min_value=0, step=1)
     
-    st.subheader("Bon Panjar")
-    potongan_bon = st.number_input("Potongan Bon Panjar", min_value=0)
-    sisa_bon = st.number_input("Sisa Bon Panjar", min_value=0)
-    
     st.subheader("Kredit Lunak")
     potongan_kredit = st.number_input("Potongan Kredit Lunak", min_value=0)
     sisa_kredit = st.number_input("Sisa Kredit Lunak", min_value=0)
@@ -33,6 +33,10 @@ with st.form("form_potongan"):
     st.subheader("Kecerobohan")
     potongan_kecerobohan = st.number_input("Potongan Kecerobohan", min_value=0)
     sisa_kecerobohan = st.number_input("Sisa Kecerobohan", min_value=0)
+    
+    st.subheader("Bon Panjar")  # PINDAH KE SINI
+    potongan_bon = st.number_input("Potongan Bon Panjar", min_value=0)
+    sisa_bon = st.number_input("Sisa Bon Panjar", min_value=0)
     
     st.subheader("Minus")
     minus_tunai = st.number_input("Minus Tunai", min_value=0)
@@ -71,12 +75,12 @@ if submit:
         "Nama Kantor": nama_kantor,
         "Nama Karyawan": nama_karyawan,
         "Jumlah Hari Kerja": jumlah_hari_kerja,
-        "Potongan Bon Panjar": potongan_bon,
-        "Sisa Bon Panjar": sisa_bon,
         "Potongan Kredit Lunak": potongan_kredit,
         "Sisa Kredit Lunak": sisa_kredit,
         "Potongan Kecerobohan": potongan_kecerobohan,
         "Sisa Kecerobohan": sisa_kecerobohan,
+        "Potongan Bon Panjar": potongan_bon,  # PINDAH KE SINI
+        "Sisa Bon Panjar": sisa_bon,
         "Minus Tunai": minus_tunai,
         "Potongan Minus": potongan_minus,
         "Jumlah Hari Tidak Masuk": jumlah_tidak_masuk,
@@ -96,17 +100,14 @@ if submit:
     
     # Simpan ke Excel
     df_baru = pd.DataFrame([data_baru])
-    if os.path.exists(file_excel):
-        df_lama = pd.read_excel(file_excel)
-        df_gabung = pd.concat([df_lama, df_baru], ignore_index=True)
-    else:
-        df_gabung = df_baru
+    df_lama = pd.read_excel(file_excel)
+    df_gabung = pd.concat([df_lama, df_baru], ignore_index=True)
     df_gabung.to_excel(file_excel, index=False)
 
     st.success("✅ Data berhasil disimpan! Cek kembali sebelum kirim ke atasan")
     st.dataframe(df_baru, use_container_width=True)
 
-    # BIKIN PDF BUAT YG NGISI
+    # BIKIN PDF
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
@@ -116,15 +117,15 @@ if submit:
     pdf.cell(0, 7, f"Tanggal: {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 1)
     pdf.cell(0, 7, f"Nama Kantor: {nama_kantor}", 0, 1)
     pdf.cell(0, 7, f"Nama Karyawan: {nama_karyawan}", 0, 1)
-    pdf.cell(0, 7, f"Total Potongan: Rp {total_potongan:,}", 0, 1)
+    pdf.cell(0, 7, f"Total Potongan: Rp {total_potongan:,}".replace(",", "."), 0, 1)
     pdf.ln(5)
     pdf.cell(0, 7, "Rincian Potongan:", 0, 1)
-    pdf.cell(0, 7, f"- Bon Panjar: Rp {potongan_bon:,}", 0, 1)
-    pdf.cell(0, 7, f"- Kredit Lunak: Rp {potongan_kredit:,}", 0, 1)
-    pdf.cell(0, 7, f"- Kecerobohan: Rp {potongan_kecerobohan:,}", 0, 1)
-    pdf.cell(0, 7, f"- Minus: Rp {potongan_minus:,}", 0, 1)
-    pdf.cell(0, 7, f"- Tidak Masuk: Rp {potongan_tidak_masuk:,}", 0, 1)
-    pdf.cell(0, 7, f"- Lainnya: Rp {jumlah_potongan_lain:,}", 0, 1)
+    pdf.cell(0, 7, f"- Kredit Lunak: Rp {potongan_kredit:,}".replace(",", "."), 0, 1)
+    pdf.cell(0, 7, f"- Kecerobohan: Rp {potongan_kecerobohan:,}".replace(",", "."), 0, 1)
+    pdf.cell(0, 7, f"- Bon Panjar: Rp {potongan_bon:,}".replace(",", "."), 0, 1)
+    pdf.cell(0, 7, f"- Minus: Rp {potongan_minus:,}".replace(",", "."), 0, 1)
+    pdf.cell(0, 7, f"- Tidak Masuk: Rp {potongan_tidak_masuk:,}".replace(",", "."), 0, 1)
+    pdf.cell(0, 7, f"- Lainnya: Rp {jumlah_potongan_lain:,}".replace(",", "."), 0, 1)
     pdf.ln(10)
     pdf.cell(0, 7, "TTD HRD:........................", 0, 1)
 
