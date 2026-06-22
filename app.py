@@ -12,7 +12,6 @@ st.title("===Data Potongan Gaji===")
 karyawan_list = ["Pilih...", "Tambah Karyawan Baru"]
 file_excel = "rekap_potongan.xlsx"
 
-# Bikin excel + header lengkap kalo belum ada
 if not os.path.exists(file_excel):
     pd.DataFrame(columns=[
         "Waktu", "Nama Kantor", "Nama Karyawan", "Jumlah Hari Kerja",
@@ -119,7 +118,6 @@ if submit:
             "Total Potongan": total_potongan
         }
         
-        # Simpan ke Excel
         df_lama = pd.read_excel(file_excel)
         df_baru = pd.DataFrame([data_baru])
         df_gabung = pd.concat([df_lama, df_baru], ignore_index=True)
@@ -128,7 +126,6 @@ if submit:
         st.success("✅ Data berhasil disimpan! Cek kembali sebelum kirim ke atasan")
         st.write(f"**Nama:** {nama_karyawan} | **Total Potongan:** Rp {total_potongan:,}".replace(",", "."))
 
-        # FUNGSI BUAT MASUKIN GAMBAR/PDF KE PDF
         def add_file_to_pdf(pdf_obj, uploaded_file, title):
             if uploaded_file is None:
                 return
@@ -150,7 +147,6 @@ if submit:
                 pdf_obj.set_font("Arial", "", 11)
                 pdf_obj.cell(0, 10, f"File terlampir: {uploaded_file.name}", 0, 1)
 
-        # BIKIN PDF 1 FILE UTUH: BUKTI + KTP + SURAT SAKIT
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", "B", 16)
@@ -203,9 +199,13 @@ if os.path.exists(file_excel):
     
     col1, col2 = st.columns(2)
     
-    # 1. DOWNLOAD EXCEL 1 FILE SEMUA DATA
+    # FIX: PAKE BytesIO BIAR GA ERROR
     with col1:
-        excel_bytes = df_rekap.to_excel(index=False)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_rekap.to_excel(writer, index=False, sheet_name='Rekap')
+        excel_bytes = output.getvalue()
+        
         st.download_button(
             label="📊 Download Excel Lengkap",
             data=excel_bytes,
@@ -214,7 +214,6 @@ if os.path.exists(file_excel):
             use_container_width=True
         )
     
-    # 2. DOWNLOAD PDF REKAP 1 FILE SEMUA KARYAWAN - JELAS TANPA TABEL
     with col2:
         pdf_rekap = FPDF()
         pdf_rekap.add_page()
@@ -229,7 +228,6 @@ if os.path.exists(file_excel):
         for i, row in df_rekap.iterrows():
             pdf_rekap.set_font("Arial", "B", 11)
             pdf_rekap.cell(0, 7, f"{i+1}. {row['Nama Karyawan']} - {row['Nama Kantor']}", 0, 1)
-            
             pdf_rekap.set_font("Arial", "", 10)
             pdf_rekap.cell(0, 6, f"   Hari Kerja: {row['Jumlah Hari Kerja']} hari", 0, 1)
             pdf_rekap.cell(0, 6, f"   Bon Panjar: Rp {row['Potongan Bon Panjar']:,} | Sisa: Rp {row['Sisa Bon Panjar']:,}".replace(",", "."), 0, 1)
@@ -238,7 +236,6 @@ if os.path.exists(file_excel):
             pdf_rekap.cell(0, 6, f"   Bon Prive: Rp {row['Bon Prive']:,}".replace(",", "."), 0, 1)
             pdf_rekap.cell(0, 6, f"   Denda Minus: Rp {row['Denda Minus']:,}".replace(",", "."), 0, 1)
             pdf_rekap.cell(0, 6, f"   Tidak Masuk: {row['Jumlah Hari Karyawan Tidak Masuk Kerja']} hari - Rp {row['Potongan Tidak Masuk Kerja']:,}".replace(",", "."), 0, 1)
-            
             pdf_rekap.set_font("Arial", "B", 11)
             pdf_rekap.cell(0, 7, f"   >>> TOTAL POTONGAN: Rp {row['Total Potongan']:,}".replace(",", "."), 0, 1)
             pdf_rekap.ln(3)
