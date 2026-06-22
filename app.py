@@ -3,6 +3,8 @@ import pandas as pd
 from fpdf import FPDF
 from datetime import datetime
 import os
+from PIL import Image
+import io
 
 st.set_page_config(page_title="Data Potongan Gaji", layout="centered")
 st.title("===Data Potongan Gaji===")
@@ -10,7 +12,7 @@ st.title("===Data Potongan Gaji===")
 karyawan_list = ["Pilih...", "Tambah Karyawan Baru"]
 file_excel = "rekap_potongan.xlsx"
 
-# Bikin excel + header lengkap
+# Bikin excel + header lengkap kalo belum ada
 if not os.path.exists(file_excel):
     pd.DataFrame(columns=[
         "Waktu", "Nama Kantor", "Nama Karyawan", "Jumlah Hari Kerja",
@@ -124,13 +126,33 @@ if submit:
         df_gabung.to_excel(file_excel, index=False)
 
         st.success("✅ Data berhasil disimpan! Cek kembali sebelum kirim ke atasan")
-        st.dataframe(df_baru, use_container_width=True)
+        st.write(f"**Nama:** {nama_karyawan} | **Total Potongan:** Rp {total_potongan:,}".replace(",", "."))
+
+        # FUNGSI BUAT MASUKIN GAMBAR/PDF KE PDF
+        def add_file_to_pdf(pdf_obj, uploaded_file, title):
+            if uploaded_file is None:
+                return
+            pdf_obj.add_page()
+            pdf_obj.set_font("Arial", "B", 14)
+            pdf_obj.cell(0, 10, title, 0, 1, "C")
+            pdf_obj.ln(5)
+            
+            file_bytes = uploaded_file.getvalue()
+            file_ext = uploaded_file.name.split('.')[-1].lower()
+            
+            if file_ext in ['jpg', 'jpeg', 'png']:
+                img = Image.open(io.BytesIO(file_bytes))
+                img_path = f"temp_img_{datetime.now().strftime('%H%M%S')}.jpg"
+                img.convert('RGB').save(img_path)
+                pdf_obj.image(img_path, x=10, y=30, w=190)
+                os.remove(img_path)
+            else:
+                pdf_obj.set_font("Arial", "", 11)
+                pdf_obj.cell(0, 10, f"File terlampir: {uploaded_file.name}", 0, 1)
 
         # BIKIN PDF 1 FILE UTUH: BUKTI + KTP + SURAT SAKIT
         pdf = FPDF()
         pdf.add_page()
-
-        # HALAMAN 1: BUKTI POTONGAN
         pdf.set_font("Arial", "B", 16)
         pdf.cell(0, 10, "BUKTI POTONGAN GAJI", 0, 1, "C")
         pdf.ln(5)
@@ -156,41 +178,9 @@ if submit:
         pdf.set_font("Arial", "", 11)
         pdf.cell(0, 7, "TTD HRD:........................", 0, 1)
 
-        # HALAMAN 2: KTP
-        if ktp_baru is not None:
-            pdf.add_page()
-            pdf.set_font("Arial", "B", 14)
-            pdf.cell(0, 10, "LAMPIRAN: KTP KARYAWAN BARU", 0, 1, "C")
-            pdf.ln(5)
-            
-            ktp_path = f"temp_ktp_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
-            with open(ktp_path, "wb") as f:
-                f.write(ktp_baru.getbuffer())
-            
-            try:
-                pdf.image(ktp_path, x=10, y=30, w=190)
-            except:
-                pdf.cell(0, 10, f"File: {ktp_baru.name}", 0, 1)
-            os.remove(ktp_path)
+        add_file_to_pdf(pdf, ktp_baru, "LAMPIRAN: KTP KARYAWAN BARU")
+        add_file_to_pdf(pdf, surat_sakit, "LAMPIRAN: SURAT KETERANGAN SAKIT")
 
-        # HALAMAN 3: SURAT SAKIT
-        if surat_sakit is not None:
-            pdf.add_page()
-            pdf.set_font("Arial", "B", 14)
-            pdf.cell(0, 10, "LAMPIRAN: SURAT KETERANGAN SAKIT", 0, 1, "C")
-            pdf.ln(5)
-            
-            surat_path = f"temp_surat_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
-            with open(surat_path, "wb") as f:
-                f.write(surat_sakit.getbuffer())
-            
-            try:
-                pdf.image(surat_path, x=10, y=30, w=190)
-            except:
-                pdf.cell(0, 10, f"File: {surat_sakit.name}", 0, 1)
-            os.remove(surat_path)
-
-        # Simpan PDF temp + download
         pdf_file = f"temp_{nama_karyawan}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
         pdf.output(pdf_file)
         with open(pdf_file, "rb") as f:
@@ -201,13 +191,75 @@ if submit:
             label="📄 Download Bukti PDF Lengkap",
             data=pdf_output,
             file_name=f"Bukti_Lengkap_{nama_karyawan}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-            mime="application/pdf"
+            mime="application/pdf",
+            use_container_width=True
         )
 
-# REKAP DATA
 st.divider()
-if st.checkbox("Lihat Rekap Semua Data"):
-    if os.path.exists(file_excel):
-        st.dataframe(pd.read_excel(file_excel), use_container_width=True)
-    else:
-        st.info("Belum ada data masuk")
+st.subheader("📁 Download Semua Data Jadi 1 File")
+
+if os.path.exists(file_excel):
+    df_rekap = pd.read_excel(file_excel)
+    
+    col1, col2 = st.columns(2)
+    
+    # 1. DOWNLOAD EXCEL 1 FILE SEMUA DATA
+    with col1:
+        excel_bytes = df_rekap.to_excel(index=False)
+        st.download_button(
+            label="📊 Download Excel Lengkap",
+            data=excel_bytes,
+            file_name=f"Rekap_Potongan_Gaji_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+    
+    # 2. DOWNLOAD PDF REKAP 1 FILE SEMUA KARYAWAN - JELAS TANPA TABEL
+    with col2:
+        pdf_rekap = FPDF()
+        pdf_rekap.add_page()
+        pdf_rekap.set_font("Arial", "B", 16)
+        pdf_rekap.cell(0, 10, "REKAP POTONGAN GAJI", 0, 1, "C")
+        pdf_rekap.set_font("Arial", "", 10)
+        pdf_rekap.cell(0, 7, f"Tanggal Cetak: {datetime.now().strftime('%d-%m-%Y %H:%M')}", 0, 1)
+        pdf_rekap.cell(0, 7, f"Total Karyawan: {len(df_rekap)} orang", 0, 1)
+        pdf_rekap.ln(5)
+        
+        total_semua = 0
+        for i, row in df_rekap.iterrows():
+            pdf_rekap.set_font("Arial", "B", 11)
+            pdf_rekap.cell(0, 7, f"{i+1}. {row['Nama Karyawan']} - {row['Nama Kantor']}", 0, 1)
+            
+            pdf_rekap.set_font("Arial", "", 10)
+            pdf_rekap.cell(0, 6, f"   Hari Kerja: {row['Jumlah Hari Kerja']} hari", 0, 1)
+            pdf_rekap.cell(0, 6, f"   Bon Panjar: Rp {row['Potongan Bon Panjar']:,} | Sisa: Rp {row['Sisa Bon Panjar']:,}".replace(",", "."), 0, 1)
+            pdf_rekap.cell(0, 6, f"   Kredit Lunak: Rp {row['Potongan Kredit Lunak']:,} | Sisa: Rp {row['Sisa Kredit Lunak']:,}".replace(",", "."), 0, 1)
+            pdf_rekap.cell(0, 6, f"   Kecerobohan: Rp {row['Potongan Kecerobohan']:,} | Sisa: Rp {row['Sisa Kecerobohan']:,}".replace(",", "."), 0, 1)
+            pdf_rekap.cell(0, 6, f"   Bon Prive: Rp {row['Bon Prive']:,}".replace(",", "."), 0, 1)
+            pdf_rekap.cell(0, 6, f"   Denda Minus: Rp {row['Denda Minus']:,}".replace(",", "."), 0, 1)
+            pdf_rekap.cell(0, 6, f"   Tidak Masuk: {row['Jumlah Hari Karyawan Tidak Masuk Kerja']} hari - Rp {row['Potongan Tidak Masuk Kerja']:,}".replace(",", "."), 0, 1)
+            
+            pdf_rekap.set_font("Arial", "B", 11)
+            pdf_rekap.cell(0, 7, f"   >>> TOTAL POTONGAN: Rp {row['Total Potongan']:,}".replace(",", "."), 0, 1)
+            pdf_rekap.ln(3)
+            total_semua += row['Total Potongan']
+        
+        pdf_rekap.ln(5)
+        pdf_rekap.set_font("Arial", "B", 12)
+        pdf_rekap.cell(0, 8, f"GRAND TOTAL SEMUA KARYAWAN: Rp {total_semua:,}".replace(",", "."), 0, 1, "C")
+        
+        pdf_rekap_file = f"rekap_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+        pdf_rekap.output(pdf_rekap_file)
+        with open(pdf_rekap_file, "rb") as f:
+            pdf_rekap_bytes = f.read()
+        os.remove(pdf_rekap_file)
+        
+        st.download_button(
+            label="📄 Download PDF Rekap",
+            data=pdf_rekap_bytes,
+            file_name=f"Rekap_Semua_Karyawan_{datetime.now().strftime('%Y%m%d')}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
+else:
+    st.info("Belum ada data masuk. Isi & Simpan Data dulu")
