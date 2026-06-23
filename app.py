@@ -45,11 +45,12 @@ def add_file_to_pdf(pdf_obj, uploaded_file, title):
         pdf_obj.cell(0, 7, f"File terlampir: {uploaded_file.name}", 0, 1)
 
 with st.form("form_pdf"):
+    st.markdown("**Wajib diisi:** Nama Kantor, Nama Karyawan, Jumlah Hari Kerja")
     nama_kantor = st.text_input("Nama Kantor *")
     nama_karyawan = st.text_input("Nama Karyawan *")
-    jumlah_hari_kerja = st.number_input("Jumlah Hari Kerja", min_value=0, step=1, value=None, format="%d")
+    jumlah_hari_kerja = st.number_input("Jumlah Hari Kerja *", min_value=0, step=1, value=None, format="%d")
     
-    st.subheader("Rincian Potongan")
+    st.subheader("Rincian Potongan - Kosongin gapapa")
     col1, col2 = st.columns(2)
     with col1:
         potongan_bon = st.number_input("Potongan Bon Panjar", min_value=0, step=1000, value=None, format="%d")
@@ -65,7 +66,7 @@ with st.form("form_pdf"):
     
     denda_minus = st.number_input("Denda Minus", min_value=0, step=1000, value=None, format="%d")
     
-    st.subheader("Karyawan Tidak Masuk")
+    st.subheader("Karyawan Tidak Masuk - Opsional")
     jumlah_tidak_masuk = st.number_input("Jumlah Hari Tidak Masuk", min_value=0, step=1, value=None, format="%d")
     keterangan_tidak_masuk = st.text_input("Keterangan Tidak Masuk Kerja")
     potongan_tidak_masuk = st.number_input("Potongan Tidak Masuk Kerja", min_value=0, step=1000, value=None, format="%d")
@@ -95,30 +96,21 @@ with st.form("form_pdf"):
         st.session_state.pot_lain_list.append({"nama": "", "jumlah": None, "sisa": None})
         st.rerun()
     
-    st.subheader("Karyawan Masuk/Keluar")
+    st.subheader("Karyawan Masuk/Keluar - Opsional")
     nama_keluar = st.text_input("Nama Karyawan Keluar")
-    tgl_keluar = st.date_input("Tanggal Karyawan Keluar *", value=None)
+    tgl_keluar = st.date_input("Tanggal Karyawan Keluar", value=None)
     nama_baru = st.text_input("Nama Karyawan Baru Masuk")
-    tgl_masuk = st.date_input("Tanggal Karyawan Baru Masuk *", value=None)
+    tgl_masuk = st.date_input("Tanggal Karyawan Baru Masuk", value=None)
     
-    st.subheader("Upload Lampiran")
+    st.subheader("Upload Lampiran - Opsional")
     ktp_baru = st.file_uploader("Upload KTP Karyawan Baru", type=["jpg", "jpeg", "png", "pdf"])
     surat_sakit = st.file_uploader("Upload Surat Keterangan Sakit", type=["jpg", "jpeg", "png", "pdf"])
     
     submit = st.form_submit_button("Generate PDF Bukti", use_container_width=True)
 
 if submit:
-    error_list = []
-    if nama_karyawan == "" or nama_kantor == "":
-        error_list.append("Nama Kantor & Nama Karyawan wajib diisi!")
-    if tgl_keluar is None:
-        error_list.append("Tanggal Karyawan Keluar wajib dipilih!")
-    if tgl_masuk is None:
-        error_list.append("Tanggal Karyawan Baru Masuk wajib dipilih!")
-    
-    if error_list:
-        for err in error_list:
-            st.error(f"❌ {err}")
+    if nama_karyawan.strip() == "" or nama_kantor.strip() == "" or jumlah_hari_kerja is None:
+        st.error("❌ Nama Kantor, Nama Karyawan & Jumlah Hari Kerja wajib diisi!")
         st.stop()
     
     jumlah_hari_kerja = to_int(jumlah_hari_kerja)
@@ -151,18 +143,30 @@ if submit:
     pdf.cell(0, 7, f"Nama Kantor: {nama_kantor}", 0, 1)
     pdf.cell(0, 7, f"Nama Karyawan: {nama_karyawan}", 0, 1)
     pdf.cell(0, 7, f"Jumlah Hari Kerja: {jumlah_hari_kerja} hari", 0, 1)
-    pdf.cell(0, 7, f"Tgl Keluar: {tgl_keluar} | Tgl Masuk: {tgl_masuk}", 0, 1)
+    
+    if tgl_keluar or tgl_masuk:
+        tgl_k = tgl_keluar.strftime('%Y-%m-%d') if tgl_keluar else "-"
+        tgl_m = tgl_masuk.strftime('%Y-%m-%d') if tgl_masuk else "-"
+        pdf.cell(0, 7, f"Tgl Keluar: {tgl_k} | Tgl Masuk: {tgl_m}", 0, 1)
     pdf.ln(5)
+    
     pdf.cell(0, 7, "Rincian Potongan:", 0, 1)
-    pdf.cell(0, 7, f"- Bon Panjar: Rp {potongan_bon:,} | Sisa: Rp {sisa_bon:,}".replace(",", "."), 0, 1)
-    pdf.cell(0, 7, f"- Kredit Lunak: Rp {potongan_kredit:,} | Sisa: Rp {sisa_kredit:,}".replace(",", "."), 0, 1)
-    pdf.cell(0, 7, f"- Kecerobohan: Rp {potongan_kecerobohan:,} | Sisa: Rp {sisa_kecerobohan:,}".replace(",", "."), 0, 1)
-    if keterangan_kecerobohan.strip() != "":
-        pdf.cell(0, 7, f"  Keterangan: {keterangan_kecerobohan}", 0, 1)
-    pdf.cell(0, 7, f"- Bon Prive: Rp {bon_prive:,}".replace(",", "."), 0, 1)
-    pdf.cell(0, 7, f"- Minus Tunai: Rp {minus_tunai:,}".replace(",", "."), 0, 1)
-    pdf.cell(0, 7, f"- Denda Minus: Rp {denda_minus:,}".replace(",", "."), 0, 1)
-    pdf.cell(0, 7, f"- Tidak Masuk {jumlah_tidak_masuk} hari: Rp {potongan_tidak_masuk:,}".replace(",", "."), 0, 1)
+    if potongan_bon > 0:
+        pdf.cell(0, 7, f"- Bon Panjar: Rp {potongan_bon:,} | Sisa: Rp {sisa_bon:,}".replace(",", "."), 0, 1)
+    if potongan_kredit > 0:
+        pdf.cell(0, 7, f"- Kredit Lunak: Rp {potongan_kredit:,} | Sisa: Rp {sisa_kredit:,}".replace(",", "."), 0, 1)
+    if potongan_kecerobohan > 0:
+        pdf.cell(0, 7, f"- Kecerobohan: Rp {potongan_kecerobohan:,} | Sisa: Rp {sisa_kecerobohan:,}".replace(",", "."), 0, 1)
+        if keterangan_kecerobohan.strip() != "":
+            pdf.cell(0, 7, f"  Keterangan: {keterangan_kecerobohan}", 0, 1)
+    if bon_prive > 0:
+        pdf.cell(0, 7, f"- Bon Prive: Rp {bon_prive:,}".replace(",", "."), 0, 1)
+    if minus_tunai > 0:
+        pdf.cell(0, 7, f"- Minus Tunai: Rp {minus_tunai:,}".replace(",", "."), 0, 1)
+    if denda_minus > 0:
+        pdf.cell(0, 7, f"- Denda Minus: Rp {denda_minus:,}".replace(",", "."), 0, 1)
+    if jumlah_tidak_masuk > 0 and potongan_tidak_masuk > 0:
+        pdf.cell(0, 7, f"- Tidak Masuk {jumlah_tidak_masuk} hari: Rp {potongan_tidak_masuk:,}".replace(",", "."), 0, 1)
     
     if nama_potongan_lain.strip() != "" and jumlah_potongan_lain > 0:
         pdf.cell(0, 7, f"- Lainnya {nama_potongan_lain}: Rp {jumlah_potongan_lain:,} | Sisa: Rp {sisa_potongan_lain:,}".replace(",", "."), 0, 1)
