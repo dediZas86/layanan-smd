@@ -14,7 +14,8 @@ file_excel = "Data_Potongan.xlsx"
 if not os.path.exists(file_excel):
     cols = ["Waktu", "Nama Kantor", "Nama Karyawan", "Jumlah Hari Kerja",
             "Potongan Bon Panjar", "Sisa Bon Panjar", "Potongan Kredit Lunak", "Sisa Kredit Lunak",
-            "Potongan Kecerobohan", "Sisa Kecerobohan", "Bon Prive", "Minus Tunai", "Denda Minus",
+            "Potongan Kecerobohan", "Sisa Kecerobohan", "Keterangan Tambahan Kecerobohan",
+            "Bon Prive", "Minus Tunai", "Denda Minus",
             "Jumlah Hari Karyawan Tidak Masuk Kerja", "Keterangan Tidak Masuk Kerja", "Potongan Tidak Masuk Kerja",
             "Potongan Lainnya (beri nama/keterangan Potongan)", "Jumlah Uang yang di Potongan Lainnya", "Sisa Potongan Lainnya",
             "Nama Karyawan Keluar", "Tanggal Karyawan Keluar", "Nama Karyawan Baru Masuk", "Tanggal Karyawan Baru Masuk",
@@ -60,7 +61,6 @@ with st.form("form_potongan"):
     nama_kantor = st.text_input("Nama Kantor *")
     nama_karyawan = st.text_input("Nama Karyawan *")
     
-    # KOSONG DARI AWAL PAKE value=None
     jumlah_hari_kerja = st.number_input("Jumlah Hari Kerja", min_value=0, step=1, value=None, format="%d")
     
     st.subheader("Rincian Potongan")
@@ -73,6 +73,7 @@ with st.form("form_potongan"):
     with col2:
         potongan_kecerobohan = st.number_input("Potongan Kecerobohan", min_value=0, step=1000, value=None, format="%d")
         sisa_kecerobohan = st.number_input("Sisa Kecerobohan", min_value=0, step=1000, value=None, format="%d")
+        keterangan_kecerobohan = st.text_input("Keterangan Tambahan Kecerobohan jika ada")
         bon_prive = st.number_input("Bon Prive", min_value=0, step=1000, value=None, format="%d")
         minus_tunai = st.number_input("Minus Tunai", min_value=0, step=1000, value=None, format="%d")
     
@@ -116,7 +117,6 @@ if submit:
             st.error(f"❌ {err}")
         st.stop()
     
-    # Convert None jadi 0
     jumlah_hari_kerja = to_int(jumlah_hari_kerja)
     potongan_bon = to_int(potongan_bon)
     sisa_bon = to_int(sisa_bon)
@@ -148,6 +148,7 @@ if submit:
         "Sisa Kredit Lunak": sisa_kredit,
         "Potongan Kecerobohan": potongan_kecerobohan,
         "Sisa Kecerobohan": sisa_kecerobohan,
+        "Keterangan Tambahan Kecerobohan": keterangan_kecerobohan,
         "Bon Prive": bon_prive,
         "Minus Tunai": minus_tunai,
         "Denda Minus": denda_minus,
@@ -190,6 +191,8 @@ if submit:
     pdf.cell(0, 7, f"- Bon Panjar: Rp {potongan_bon:,} | Sisa: Rp {sisa_bon:,}".replace(",", "."), 0, 1)
     pdf.cell(0, 7, f"- Kredit Lunak: Rp {potongan_kredit:,} | Sisa: Rp {sisa_kredit:,}".replace(",", "."), 0, 1)
     pdf.cell(0, 7, f"- Kecerobohan: Rp {potongan_kecerobohan:,} | Sisa: Rp {sisa_kecerobohan:,}".replace(",", "."), 0, 1)
+    if keterangan_kecerobohan.strip() != "":
+        pdf.cell(0, 7, f"  Keterangan: {keterangan_kecerobohan}", 0, 1)
     pdf.cell(0, 7, f"- Bon Prive: Rp {bon_prive:,}".replace(",", "."), 0, 1)
     pdf.cell(0, 7, f"- Minus Tunai: Rp {minus_tunai:,}".replace(",", "."), 0, 1)
     pdf.cell(0, 7, f"- Denda Minus: Rp {denda_minus:,}".replace(",", "."), 0, 1)
@@ -248,6 +251,8 @@ with col2:
         for i, row in df.iterrows():
             pdf_rekap.cell(0, 6, f"{i+1}. {row['Nama Karyawan']} - {row['Nama Kantor']}", 0, 1)
             pdf_rekap.cell(0, 6, f"   Total Potongan: Rp {row['Total Potongan']:,}".replace(",", "."), 0, 1)
+            if pd.notna(row['Keterangan Tambahan Kecerobohan']) and row['Keterangan Tambahan Kecerobohan'].strip() != "":
+                pdf_rekap.cell(0, 6, f"   Ket Kecerobohan: {row['Keterangan Tambahan Kecerobohan']}", 0, 1)
             pdf_rekap.ln(2)
             total_semua += row['Total Potongan']
         
