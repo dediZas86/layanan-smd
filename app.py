@@ -53,37 +53,40 @@ def add_file_to_pdf(pdf_obj, uploaded_file, title):
         pdf_obj.set_font("Arial", "", 11)
         pdf_obj.cell(0, 10, f"File terlampir: {uploaded_file.name}", 0, 1)
 
+def to_int(val):
+    return int(val) if val is not None else 0
+
 with st.form("form_potongan"):
     nama_kantor = st.text_input("Nama Kantor *")
     nama_karyawan = st.text_input("Nama Karyawan *")
     
-    # PAKE NUMBER_INPUT BIAR AMAN
-    jumlah_hari_kerja = st.number_input("Jumlah Hari Kerja", min_value=0, step=1, value=0)
+    # KOSONG DARI AWAL PAKE value=None
+    jumlah_hari_kerja = st.number_input("Jumlah Hari Kerja", min_value=0, step=1, value=None, format="%d")
     
     st.subheader("Rincian Potongan")
     col1, col2 = st.columns(2)
     with col1:
-        potongan_bon = st.number_input("Potongan Bon Panjar", min_value=0, step=1000, value=0)
-        sisa_bon = st.number_input("Sisa Bon Panjar", min_value=0, step=1000, value=0)
-        potongan_kredit = st.number_input("Potongan Kredit Lunak", min_value=0, step=1000, value=0)
-        sisa_kredit = st.number_input("Sisa Kredit Lunak", min_value=0, step=1000, value=0)
+        potongan_bon = st.number_input("Potongan Bon Panjar", min_value=0, step=1000, value=None, format="%d")
+        sisa_bon = st.number_input("Sisa Bon Panjar", min_value=0, step=1000, value=None, format="%d")
+        potongan_kredit = st.number_input("Potongan Kredit Lunak", min_value=0, step=1000, value=None, format="%d")
+        sisa_kredit = st.number_input("Sisa Kredit Lunak", min_value=0, step=1000, value=None, format="%d")
     with col2:
-        potongan_kecerobohan = st.number_input("Potongan Kecerobohan", min_value=0, step=1000, value=0)
-        sisa_kecerobohan = st.number_input("Sisa Kecerobohan", min_value=0, step=1000, value=0)
-        bon_prive = st.number_input("Bon Prive", min_value=0, step=1000, value=0)
-        minus_tunai = st.number_input("Minus Tunai", min_value=0, step=1000, value=0)
+        potongan_kecerobohan = st.number_input("Potongan Kecerobohan", min_value=0, step=1000, value=None, format="%d")
+        sisa_kecerobohan = st.number_input("Sisa Kecerobohan", min_value=0, step=1000, value=None, format="%d")
+        bon_prive = st.number_input("Bon Prive", min_value=0, step=1000, value=None, format="%d")
+        minus_tunai = st.number_input("Minus Tunai", min_value=0, step=1000, value=None, format="%d")
     
-    denda_minus = st.number_input("Denda Minus", min_value=0, step=1000, value=0)
+    denda_minus = st.number_input("Denda Minus", min_value=0, step=1000, value=None, format="%d")
     
     st.subheader("Karyawan Tidak Masuk")
-    jumlah_tidak_masuk = st.number_input("Jumlah Hari Tidak Masuk", min_value=0, step=1, value=0)
+    jumlah_tidak_masuk = st.number_input("Jumlah Hari Tidak Masuk", min_value=0, step=1, value=None, format="%d")
     keterangan_tidak_masuk = st.text_input("Keterangan Tidak Masuk Kerja")
-    potongan_tidak_masuk = st.number_input("Potongan Tidak Masuk Kerja", min_value=0, step=1000, value=0)
+    potongan_tidak_masuk = st.number_input("Potongan Tidak Masuk Kerja", min_value=0, step=1000, value=None, format="%d")
     
     st.subheader("Potongan Lainnya")
     nama_potongan_lain = st.text_input("Nama/Keterangan Potongan Lainnya")
-    jumlah_potongan_lain = st.number_input("Jumlah Uang Potongan Lainnya", min_value=0, step=1000, value=0)
-    sisa_potongan_lain = st.number_input("Sisa Potongan Lainnya", min_value=0, step=1000, value=0)
+    jumlah_potongan_lain = st.number_input("Jumlah Uang Potongan Lainnya", min_value=0, step=1000, value=None, format="%d")
+    sisa_potongan_lain = st.number_input("Sisa Potongan Lainnya", min_value=0, step=1000, value=None, format="%d")
     
     st.subheader("Karyawan Masuk/Keluar")
     nama_keluar = st.text_input("Nama Karyawan Keluar")
@@ -113,21 +116,21 @@ if submit:
             st.error(f"❌ {err}")
         st.stop()
     
-    # Convert ke int
-    jumlah_hari_kerja = int(jumlah_hari_kerja)
-    potongan_bon = int(potongan_bon)
-    sisa_bon = int(sisa_bon)
-    potongan_kredit = int(potongan_kredit)
-    sisa_kredit = int(sisa_kredit)
-    potongan_kecerobohan = int(potongan_kecerobohan)
-    sisa_kecerobohan = int(sisa_kecerobohan)
-    bon_prive = int(bon_prive)
-    minus_tunai = int(minus_tunai)
-    denda_minus = int(denda_minus)
-    jumlah_tidak_masuk = int(jumlah_tidak_masuk)
-    potongan_tidak_masuk = int(potongan_tidak_masuk)
-    jumlah_potongan_lain = int(jumlah_potongan_lain)
-    sisa_potongan_lain = int(sisa_potongan_lain)
+    # Convert None jadi 0
+    jumlah_hari_kerja = to_int(jumlah_hari_kerja)
+    potongan_bon = to_int(potongan_bon)
+    sisa_bon = to_int(sisa_bon)
+    potongan_kredit = to_int(potongan_kredit)
+    sisa_kredit = to_int(sisa_kredit)
+    potongan_kecerobohan = to_int(potongan_kecerobohan)
+    sisa_kecerobohan = to_int(sisa_kecerobohan)
+    bon_prive = to_int(bon_prive)
+    minus_tunai = to_int(minus_tunai)
+    denda_minus = to_int(denda_minus)
+    jumlah_tidak_masuk = to_int(jumlah_tidak_masuk)
+    potongan_tidak_masuk = to_int(potongan_tidak_masuk)
+    jumlah_potongan_lain = to_int(jumlah_potongan_lain)
+    sisa_potongan_lain = to_int(sisa_potongan_lain)
     
     nama_ktp = ktp_baru.name if ktp_baru else "-"
     nama_surat = surat_sakit.name if surat_sakit else "-"
