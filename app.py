@@ -8,6 +8,9 @@ import io
 st.set_page_config(page_title="Bukti Potongan PDF", layout="centered")
 st.title("📝 Bukti Potongan Gaji - PDF Only")
 
+if "pot_lain_list" not in st.session_state:
+    st.session_state.pot_lain_list = []
+
 def to_int(val):
     return int(val) if val is not None else 0
 
@@ -68,9 +71,29 @@ with st.form("form_pdf"):
     potongan_tidak_masuk = st.number_input("Potongan Tidak Masuk Kerja", min_value=0, step=1000, value=None, format="%d")
     
     st.subheader("Potongan Lainnya")
-    nama_potongan_lain = st.text_input("Nama/Keterangan Potongan Lainnya")
-    jumlah_potongan_lain = st.number_input("Jumlah Uang Potongan Lainnya", min_value=0, step=1000, value=None, format="%d")
-    sisa_potongan_lain = st.number_input("Sisa Potongan Lainnya", min_value=0, step=1000, value=None, format="%d")
+    nama_potongan_lain = st.text_input("Nama/Keterangan Potongan Lainnya 1")
+    jumlah_potongan_lain = st.number_input("Jumlah Uang Potongan Lainnya 1", min_value=0, step=1000, value=None, format="%d")
+    sisa_potongan_lain = st.number_input("Sisa Potongan Lainnya 1", min_value=0, step=1000, value=None, format="%d")
+    
+    st.markdown("---")
+    st.write("**Tambah Potongan Lainnya Lagi**")
+    for i, pot in enumerate(st.session_state.pot_lain_list):
+        col1, col2, col3, col4 = st.columns([3,2,2,0.8])
+        with col1:
+            pot["nama"] = st.text_input(f"Nama Potongan {i+2}", value=pot["nama"], key=f"nama_lain_{i}")
+        with col2:
+            pot["jumlah"] = st.number_input(f"Jumlah {i+2}", min_value=0, step=1000, value=pot["jumlah"], format="%d", key=f"jumlah_lain_{i}")
+        with col3:
+            pot["sisa"] = st.number_input(f"Sisa {i+2}", min_value=0, step=1000, value=pot["sisa"], format="%d", key=f"sisa_lain_{i}")
+        with col4:
+            st.write("")
+            if st.form_submit_button("❌", key=f"del_lain_{i}"):
+                st.session_state.pot_lain_list.pop(i)
+                st.rerun()
+    
+    if st.form_submit_button("+ Tambah Potongan Lainnya"):
+        st.session_state.pot_lain_list.append({"nama": "", "jumlah": None, "sisa": None})
+        st.rerun()
     
     st.subheader("Karyawan Masuk/Keluar")
     nama_keluar = st.text_input("Nama Karyawan Keluar")
@@ -114,6 +137,9 @@ if submit:
     sisa_potongan_lain = to_int(sisa_potongan_lain)
     
     total_potongan = potongan_bon + potongan_kredit + potongan_kecerobohan + bon_prive + denda_minus + potongan_tidak_masuk + jumlah_potongan_lain
+    
+    for pot in st.session_state.pot_lain_list:
+        total_potongan += to_int(pot["jumlah"])
 
     pdf = FPDF()
     pdf.add_page()
@@ -137,7 +163,14 @@ if submit:
     pdf.cell(0, 7, f"- Minus Tunai: Rp {minus_tunai:,}".replace(",", "."), 0, 1)
     pdf.cell(0, 7, f"- Denda Minus: Rp {denda_minus:,}".replace(",", "."), 0, 1)
     pdf.cell(0, 7, f"- Tidak Masuk {jumlah_tidak_masuk} hari: Rp {potongan_tidak_masuk:,}".replace(",", "."), 0, 1)
-    pdf.cell(0, 7, f"- Lainnya {nama_potongan_lain}: Rp {jumlah_potongan_lain:,} | Sisa: Rp {sisa_potongan_lain:,}".replace(",", "."), 0, 1)
+    
+    if nama_potongan_lain.strip() != "" and jumlah_potongan_lain > 0:
+        pdf.cell(0, 7, f"- Lainnya {nama_potongan_lain}: Rp {jumlah_potongan_lain:,} | Sisa: Rp {sisa_potongan_lain:,}".replace(",", "."), 0, 1)
+    
+    for pot in st.session_state.pot_lain_list:
+        if pot["nama"].strip() != "" and to_int(pot["jumlah"]) > 0:
+            pdf.cell(0, 7, f"- Lainnya {pot['nama']}: Rp {to_int(pot['jumlah']):,} | Sisa: Rp {to_int(pot['sisa']):,}".replace(",", "."), 0, 1)
+    
     pdf.ln(5)
     pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 7, f"TOTAL POTONGAN: Rp {total_potongan:,}".replace(",", "."), 0, 1)
