@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 from fpdf import FPDF
 from PIL import Image
 import os
 import io
+import re
 
 st.set_page_config(page_title="Input Potongan Gaji", layout="centered")
 st.title("📝 Form Input Potongan Gaji Karyawan")
@@ -53,18 +54,27 @@ def add_file_to_pdf(pdf_obj, uploaded_file, title):
         pdf_obj.set_font("Arial", "", 11)
         pdf_obj.cell(0, 10, f"File terlampir: {uploaded_file.name}", 0, 1)
 
-# Fungsi buat convert text jadi angka, kalo kosong = 0
+# Fungsi convert + validasi angka
 def to_int(val):
-    try:
-        return int(val) if val.strip() != "" else 0
-    except:
+    if val.strip() == "":
         return 0
+    # Hapus titik biar 500.000 jadi 500000
+    val_clean = val.replace(".", "").replace(",", "")
+    if not val_clean.isdigit():
+        return "error"
+    return int(val_clean)
+
+# Fungsi format ribuan
+def format_ribuan(val):
+    val_clean = val.replace(".", "").replace(",", "")
+    if val_clean.isdigit() and val_clean != "":
+        return f"{int(val_clean):,}".replace(",", ".")
+    return val
 
 with st.form("form_potongan"):
     nama_kantor = st.text_input("Nama Kantor *")
     nama_karyawan = st.text_input("Nama Karyawan *")
     
-    # PAKE TEXT_INPUT BIAR BENER2 KOSONG
     jumlah_hari_kerja = st.text_input("Jumlah Hari Kerja", placeholder="Masukkan angka")
     
     st.subheader("Rincian Potongan")
@@ -94,9 +104,10 @@ with st.form("form_potongan"):
     
     st.subheader("Karyawan Masuk/Keluar")
     nama_keluar = st.text_input("Nama Karyawan Keluar")
-    tgl_keluar = st.date_input("Tanggal Karyawan Keluar", value=None)
+    # POIN 3: default tanggal hari ini
+    tgl_keluar = st.date_input("Tanggal Karyawan Keluar", value=date.today())
     nama_baru = st.text_input("Nama Karyawan Baru Masuk")
-    tgl_masuk = st.date_input("Tanggal Karyawan Baru Masuk", value=None)
+    tgl_masuk = st.date_input("Tanggal Karyawan Baru Masuk", value=date.today())
     
     st.subheader("Upload Lampiran")
     ktp_baru = st.file_uploader("Upload KTP Karyawan Baru", type=["jpg", "jpeg", "png", "pdf"])
@@ -108,7 +119,34 @@ if submit:
     if nama_karyawan == "" or nama_kantor == "":
         st.error("Nama Kantor & Nama Karyawan wajib diisi!")
     else:
-        # Convert semua jadi angka
+        # POIN 1: Validasi semua input angka
+        fields = {
+            "Jumlah Hari Kerja": jumlah_hari_kerja,
+            "Potongan Bon Panjar": potongan_bon,
+            "Sisa Bon Panjar": sisa_bon,
+            "Potongan Kredit Lunak": potongan_kredit,
+            "Sisa Kredit Lunak": sisa_kredit,
+            "Potongan Kecerobohan": potongan_kecerobohan,
+            "Sisa Kecerobohan": sisa_kecerobohan,
+            "Bon Prive": bon_prive,
+            "Minus Tunai": minus_tunai,
+            "Denda Minus": denda_minus,
+            "Jumlah Hari Tidak Masuk": jumlah_tidak_masuk,
+            "Potongan Tidak Masuk Kerja": potongan_tidak_masuk,
+            "Jumlah Uang Potongan Lainnya": jumlah_potongan_lain,
+            "Sisa Potongan Lainnya": sisa_potongan_lain
+        }
+        
+        error_found = False
+        for nama_field, val in fields.items():
+            if to_int(val) == "error":
+                st.error(f"❌ {nama_field}: Harus isi angka aja bang, ga boleh huruf/simbol")
+                error_found = True
+        
+        if error_found:
+            st.stop()
+        
+        # Convert semua jadi int
         jumlah_hari_kerja = to_int(jumlah_hari_kerja)
         potongan_bon = to_int(potongan_bon)
         sisa_bon = to_int(sisa_bon)
