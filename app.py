@@ -221,7 +221,7 @@ with st.form("form_pdf"):
     st.markdown("---")
     st.subheader("Kritik & Saran - Opsional")
     kritik_saran = st.text_area(
-        "Masukkan kritik/saran untuk Bagian Pengurus PUSAF",
+        "Masukkan kritik/saran untuk Bagian Pengurus",
         height=100
     )
     
